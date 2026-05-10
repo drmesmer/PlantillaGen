@@ -211,7 +211,7 @@ public class FichaOperario extends JPanel {
             g2d.fillRoundRect(badgeX + 1, badgeY + 1, BADGE_SIZE, BADGE_SIZE, 4, 4);
             g2d.setColor(new Color(255, 140, 0));
             g2d.fillRoundRect(badgeX, badgeY, BADGE_SIZE, BADGE_SIZE, 4, 4);
-            g2d.setColor(Color.WHITE);
+            g2d.setColor(Color.BLACK);
             g2d.setFont(new Font("Segoe UI", Font.BOLD, 8));
             FontMetrics lfm = g2d.getFontMetrics();
             String lb = "L";
@@ -225,7 +225,7 @@ public class FichaOperario extends JPanel {
             g2d.fillRoundRect(badgeX + 1, badgeY + 1, BADGE_SIZE, BADGE_SIZE, 4, 4);
             g2d.setColor(new Color(255, 190, 30));
             g2d.fillRoundRect(badgeX, badgeY, BADGE_SIZE, BADGE_SIZE, 4, 4);
-            g2d.setColor(Color.WHITE);
+            g2d.setColor(Color.BLACK);
             g2d.setFont(new Font("Segoe UI", Font.BOLD, 8));
             FontMetrics bfm = g2d.getFontMetrics();
             String ft = "F";
