@@ -133,47 +133,30 @@ public class CalendarioTabPanel extends JPanel {
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
         topBar.setOpaque(false);
 
-        JButton btnPrev = new JButton("\u25C0");
-        btnPrev.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JButton btnPrev = new JButton("<");
+        btnPrev.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnPrev.setFocusPainted(false);
-        btnPrev.setPreferredSize(new Dimension(36, 28));
+        btnPrev.setPreferredSize(new Dimension(32, 28));
         btnPrev.addActionListener(e -> {
             selectedYear--;
             buildCalendar();
         });
 
         yearLabel = new JLabel(String.valueOf(selectedYear));
-        yearLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        yearLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
 
-        JButton btnNext = new JButton("\u25B6");
-        btnNext.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JButton btnNext = new JButton(">");
+        btnNext.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnNext.setFocusPainted(false);
-        btnNext.setPreferredSize(new Dimension(36, 28));
+        btnNext.setPreferredSize(new Dimension(32, 28));
         btnNext.addActionListener(e -> {
             selectedYear++;
             buildCalendar();
         });
 
-        JComboBox<Integer> yearCombo = new JComboBox<>();
-        int currentYear = LocalDate.now().getYear();
-        for (int y = currentYear - 5; y <= currentYear + 5; y++) {
-            yearCombo.addItem(y);
-        }
-        yearCombo.setSelectedItem(selectedYear);
-        yearCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        yearCombo.addActionListener(e -> {
-            Integer y = (Integer) yearCombo.getSelectedItem();
-            if (y != null && y != selectedYear) {
-                selectedYear = y;
-                buildCalendar();
-            }
-        });
-
         topBar.add(btnPrev);
         topBar.add(yearLabel);
         topBar.add(btnNext);
-        topBar.add(new JLabel("  Ir a:"));
-        topBar.add(yearCombo);
 
         panel.add(topBar, BorderLayout.NORTH);
 
@@ -202,8 +185,10 @@ public class CalendarioTabPanel extends JPanel {
     }
 
     private JPanel buildMonthPanel(int month) {
-        JPanel panel = new JPanel(new BorderLayout(2, 2));
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
+        panel.setMinimumSize(new Dimension(160, 160));
 
         JLabel titleLabel = new JLabel(MONTH_NAMES[month - 1], SwingConstants.CENTER);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
@@ -211,9 +196,16 @@ public class CalendarioTabPanel extends JPanel {
         titleLabel.setBackground(MONTH_TITLE_BG);
         titleLabel.setOpaque(true);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(3, 0, 3, 0));
-        panel.add(titleLabel, BorderLayout.NORTH);
+        titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, titleLabel.getPreferredSize().height));
+        panel.add(titleLabel);
 
-        JPanel headerRow = new JPanel(new GridLayout(1, 8, 0, 0));
+        JPanel headerRow = new JPanel(new GridLayout(1, 8, 0, 0)) {
+            public Dimension getPreferredSize() {
+                Dimension d = super.getPreferredSize();
+                d.height = 26;
+                return d;
+            }
+        };
         headerRow.setBackground(HEADER_BG);
 
         JLabel semHeader = new JLabel("Sem", SwingConstants.CENTER);
@@ -226,7 +218,7 @@ public class CalendarioTabPanel extends JPanel {
 
         for (int d = 0; d < 7; d++) {
             JLabel lbl = new JLabel(DAY_NAMES[d], SwingConstants.CENTER);
-            lbl.setFont(new Font("Segoe UI", Font.PLAIN, 8));
+            lbl.setFont(new Font("Segoe UI", Font.BOLD, 8));
             lbl.setForeground(d >= 5 ? SUNDAY_FG : Color.DARK_GRAY);
             lbl.setOpaque(true);
             lbl.setBackground(HEADER_BG);
@@ -234,7 +226,7 @@ public class CalendarioTabPanel extends JPanel {
             headerRow.add(lbl);
         }
 
-        panel.add(headerRow, BorderLayout.CENTER);
+        panel.add(headerRow);
 
         JPanel weeksPanel = new JPanel(new GridLayout(6, 8, 0, 0));
 
@@ -327,7 +319,7 @@ public class CalendarioTabPanel extends JPanel {
             }
         }
 
-        panel.add(weeksPanel, BorderLayout.SOUTH);
+        panel.add(weeksPanel);
         return panel;
     }
 
