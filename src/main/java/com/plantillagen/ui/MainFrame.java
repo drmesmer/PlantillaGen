@@ -712,6 +712,7 @@ public class MainFrame extends JFrame {
                             FichaOperario ficha = new FichaOperario(op, currentLineaPhotoSize);
                             if (sa.lider) ficha.setLider(true);
                             ficha.setOnStateChanged(onStateChanged);
+                            ficha.setOnDoubleClick(() -> openOperarioInTab(op.getId()));
                             int panelIdx = dbIdToIndex.get(dbId) + (t - 1);
                             if (sa.lider) {
                                 lineaLeaderPanels.get(panelIdx).add(ficha);
@@ -1011,6 +1012,7 @@ public class MainFrame extends JFrame {
                         FichaOperario ficha = new FichaOperario(op, currentLineaPhotoSize);
                         if (entry.isEsLider()) ficha.setLider(true);
                         ficha.setOnStateChanged(onStateChanged);
+                        ficha.setOnDoubleClick(() -> openOperarioInTab(op.getId()));
 
                         if (entry.isEsLider()) {
                             lineaLeaderPanels.get(panelIdx).add(ficha);
@@ -1123,6 +1125,11 @@ public class MainFrame extends JFrame {
             statusLabel.setText("Error BD: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private void openOperarioInTab(int operarioId) {
+        tabbedPane.setSelectedIndex(2);
+        operariosTabPanel.selectOperarioById(operarioId);
     }
 
     private List<String> discoverImageResources() {
@@ -1406,6 +1413,7 @@ public class MainFrame extends JFrame {
                     FichaOperario ficha = new FichaOperario(op, getPhotoSize());
                     if (maxCount == 2) ficha.setLider(true);
                     ficha.setOnStateChanged(onStateChanged);
+                    ficha.setOnDoubleClick(() -> openOperarioInTab(op.getId()));
                     targetPanel.add(ficha);
                 }
                 removeOperarioFromAllPanels(op, targetPanel);

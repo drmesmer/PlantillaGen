@@ -82,9 +82,14 @@ public class FichaOperario extends JPanel {
     }
 
     private Runnable onStateChanged;
+    private Runnable onDoubleClick;
 
     public void setOnStateChanged(Runnable callback) {
         this.onStateChanged = callback;
+    }
+
+    public void setOnDoubleClick(Runnable callback) {
+        this.onDoubleClick = callback;
     }
 
     public void setPhotoSize(int newSize) {
@@ -325,6 +330,10 @@ public class FichaOperario extends JPanel {
                     repaint();
                     if (onStateChanged != null) {
                         onStateChanged.run();
+                    }
+                } else if (e.getButton() == MouseEvent.BUTTON1 && e.getClickCount() == 2) {
+                    if (onDoubleClick != null) {
+                        onDoubleClick.run();
                     }
                 }
             }

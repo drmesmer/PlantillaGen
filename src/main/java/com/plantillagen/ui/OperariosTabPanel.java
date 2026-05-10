@@ -510,7 +510,7 @@ public class OperariosTabPanel extends JPanel {
         loadSliders(op);
     }
 
-    private void selectOperarioById(int id) {
+    public void selectOperarioById(int id) {
         for (Operario op : operarios) {
             if (op.getId() == id) {
                 selectOperarioByRef(op);
