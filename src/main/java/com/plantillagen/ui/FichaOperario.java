@@ -144,7 +144,18 @@ public class FichaOperario extends JPanel {
             g2d.fill(new RoundRectangle2D.Float(cx + i, cy + i, cw, ch, 8, 8));
         }
 
-        g2d.setColor(hover ? new Color(240, 245, 255) : Color.WHITE);
+        Color cardBg = Color.WHITE;
+        java.awt.Container p = getParent();
+        if (p != null) p = p.getParent();
+        if (p != null && p.getBackground() != null) {
+            Color lineBg = p.getBackground();
+            cardBg = new Color(
+                lineBg.getRed() + (255 - lineBg.getRed()) / 3,
+                lineBg.getGreen() + (255 - lineBg.getGreen()) / 3,
+                lineBg.getBlue() + (255 - lineBg.getBlue()) / 3);
+        }
+
+        g2d.setColor(hover ? cardBg.brighter() : cardBg);
         g2d.fill(new RoundRectangle2D.Float(cx, cy, cw, ch, 8, 8));
 
         g2d.setColor(new Color(210, 210, 210));
