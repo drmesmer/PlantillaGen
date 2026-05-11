@@ -33,9 +33,11 @@ import java.time.YearMonth;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public class CalendarioTabPanel extends JPanel {
 
@@ -54,6 +56,8 @@ public class CalendarioTabPanel extends JPanel {
 
     private LocalDate dragStart = null;
     private LocalDate dragEnd = null;
+    private final Map<LocalDate, JLabel> dayLabelMap = new HashMap<>();
+    private final Set<JLabel> previewLabels = new HashSet<>();
 
     private static final Color ROW_EVEN = new Color(255, 255, 255);
     private static final Color ROW_ODD = new Color(247, 249, 252);
@@ -66,6 +70,7 @@ public class CalendarioTabPanel extends JPanel {
     private static final Color WEEK_COLOR = new Color(150, 155, 165);
     private static final Color MONTH_TITLE_BG = new Color(70, 90, 120);
     private static final Color SEPARATOR = new Color(228, 231, 237);
+    private static final Color DRAG_PREVIEW = new Color(160, 190, 255);
 
     private static final String[] DAY_NAMES = {"L", "M", "X", "J", "V", "S", "D"};
     private static final String[] MONTH_NAMES = {
@@ -186,6 +191,7 @@ public class CalendarioTabPanel extends JPanel {
 
     private void buildCalendar() {
         monthsContainer.removeAll();
+        dayLabelMap.clear();
         yearLabel.setText(String.valueOf(selectedYear));
 
         for (int m = 1; m <= 12; m++) {
@@ -312,18 +318,22 @@ public class CalendarioTabPanel extends JPanel {
                     final int dow = d;
                     final LocalDate clickedDate = cellDate;
 
+                    dayLabelMap.put(clickedDate, dayLabel);
                     dayLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                     dayLabel.addMouseListener(new MouseAdapter() {
                         public void mousePressed(MouseEvent e) {
                             if (e.getButton() == MouseEvent.BUTTON1) {
+                                clearDragPreview();
                                 dragStart = clickedDate;
                                 dragEnd = clickedDate;
+                                updateDragPreview(dragStart, dragStart);
                             }
                         }
                         public void mouseReleased(MouseEvent e) {
                             if (e.getButton() == MouseEvent.BUTTON3) {
                                 if (hasAssignment) removeAssignment(clickedDate);
                             } else if (dragStart != null) {
+                                clearDragPreview();
                                 LocalDate end = dragEnd != null ? dragEnd : dragStart;
                                 if (dragStart.equals(end)) {
                                     if (hasAssignment) removeAssignment(clickedDate);
@@ -337,13 +347,18 @@ public class CalendarioTabPanel extends JPanel {
                         }
                         public void mouseEntered(MouseEvent e) {
                             if (dragStart != null) {
-                                dragEnd = clickedDate;
+                                if (!clickedDate.equals(dragEnd)) {
+                                    dragEnd = clickedDate;
+                                    updateDragPreview(dragStart, dragEnd);
+                                }
+                            } else {
+                                if (hasAssignment && assignedColor != null)
+                                    dayLabel.setBackground(assignedColor.darker());
+                                else dayLabel.setBackground(dayLabel.getBackground().darker());
                             }
-                            if (hasAssignment && assignedColor != null)
-                                dayLabel.setBackground(assignedColor.darker());
-                            else dayLabel.setBackground(dayLabel.getBackground().darker());
                         }
                         public void mouseExited(MouseEvent e) {
+                            if (dragStart != null) return;
                             if (hasAssignment && assignedColor != null)
                                 dayLabel.setBackground(assignedColor);
                             else if (clickedDate.equals(today))
@@ -458,6 +473,50 @@ public class CalendarioTabPanel extends JPanel {
         } catch (Exception e) {
             e.printStackTrace();
             calendarioEntries = new ArrayList<>();
+        }
+    }
+
+    private void clearDragPreview() {
+        for (JLabel lbl : previewLabels) {
+            restoreDayBackground(lbl);
+        }
+        previewLabels.clear();
+    }
+
+    private void updateDragPreview(LocalDate from, LocalDate to) {
+        clearDragPreview();
+        if (from == null || to == null) return;
+        LocalDate start = from.isBefore(to) ? from : to;
+        LocalDate end = from.isBefore(to) ? to : from;
+        Color previewColor = selectedPlantilla != null
+            ? new Color(
+                parseColor(selectedPlantilla.getColor()).getRed(),
+                parseColor(selectedPlantilla.getColor()).getGreen(),
+                parseColor(selectedPlantilla.getColor()).getBlue(),
+                140)
+            : DRAG_PREVIEW;
+        LocalDate d = start;
+        while (!d.isAfter(end)) {
+            JLabel lbl = dayLabelMap.get(d);
+            if (lbl != null) {
+                lbl.setBackground(previewColor);
+                previewLabels.add(lbl);
+            }
+            d = d.plusDays(1);
+        }
+    }
+
+    private void restoreDayBackground(JLabel lbl) {
+        for (Map.Entry<LocalDate, JLabel> e : dayLabelMap.entrySet()) {
+            if (e.getValue() == lbl) {
+                LocalDate date = e.getKey();
+                Color assigned = colorData.get(date);
+                if (assigned != null) lbl.setBackground(assigned);
+                else if (date.equals(LocalDate.now())) lbl.setBackground(TODAY_BG);
+                else if (date.getDayOfWeek().getValue() >= 6) lbl.setBackground(WEEKEND_BG);
+                else lbl.setBackground(Color.WHITE);
+                return;
+            }
         }
     }
 
