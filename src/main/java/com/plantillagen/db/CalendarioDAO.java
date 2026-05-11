@@ -23,6 +23,10 @@ public class CalendarioDAO {
             stmt.execute("ALTER TABLE calendario "
                 + "ADD COLUMN IF NOT EXISTS plantilla_id INTEGER");
             stmt.execute("ALTER TABLE calendario "
+                + "DROP COLUMN IF EXISTS linea_id");
+            stmt.execute("ALTER TABLE calendario "
+                + "DROP COLUMN IF EXISTS turno_id");
+            stmt.execute("ALTER TABLE calendario "
                 + "DROP CONSTRAINT IF EXISTS calendario_linea_id_turno_id_fecha_key");
             stmt.execute("ALTER TABLE calendario "
                 + "DROP CONSTRAINT IF EXISTS calendario_plantilla_id_fecha_key");

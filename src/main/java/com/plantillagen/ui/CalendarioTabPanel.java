@@ -339,7 +339,16 @@ public class CalendarioTabPanel extends JPanel {
                                     if (hasAssignment) removeAssignment(clickedDate);
                                     else assignPlantilla(clickedDate);
                                 } else {
-                                    assignRange(dragStart, end);
+                                    LocalDate from = dragStart.isBefore(end) ? dragStart : end;
+                                    LocalDate to = dragStart.isBefore(end) ? end : dragStart;
+                                    boolean anyAssigned = false;
+                                    LocalDate d = from;
+                                    while (!d.isAfter(to)) {
+                                        if (calendarioData.containsKey(d)) { anyAssigned = true; break; }
+                                        d = d.plusDays(1);
+                                    }
+                                    if (anyAssigned) unassignRange(from, to);
+                                    else assignRange(dragStart, end);
                                 }
                             }
                             dragStart = null;
@@ -423,6 +432,27 @@ public class CalendarioTabPanel extends JPanel {
         } catch (Exception ex) { ex.printStackTrace(); }
     }
 
+    private void unassignRange(LocalDate start, LocalDate end) {
+        if (start.isAfter(end)) {
+            LocalDate tmp = start; start = end; end = tmp;
+        }
+        try {
+            CalendarioDAO dao = new CalendarioDAO();
+            LocalDate d = start;
+            while (!d.isAfter(end)) {
+                for (CalendarioEntry e : calendarioEntries) {
+                    if (e.getFecha().equals(d)) {
+                        dao.deleteByPlantillaAndDate(e.getPlantillaId(), d);
+                        break;
+                    }
+                }
+                d = d.plusDays(1);
+            }
+            loadCalendarData();
+            buildCalendar();
+        } catch (Exception ex) { ex.printStackTrace(); }
+    }
+
     private void removeAssignment(LocalDate date) {
         String name = calendarioData.get(date);
         if (name == null) return;
@@ -488,13 +518,16 @@ public class CalendarioTabPanel extends JPanel {
         if (from == null || to == null) return;
         LocalDate start = from.isBefore(to) ? from : to;
         LocalDate end = from.isBefore(to) ? to : from;
-        Color previewColor = selectedPlantilla != null
-            ? new Color(
-                parseColor(selectedPlantilla.getColor()).getRed(),
-                parseColor(selectedPlantilla.getColor()).getGreen(),
-                parseColor(selectedPlantilla.getColor()).getBlue(),
-                140)
-            : DRAG_PREVIEW;
+        Color previewColor;
+        if (selectedPlantilla != null) {
+            Color c = parseColor(selectedPlantilla.getColor());
+            previewColor = new Color(
+                c.getRed() + (255 - c.getRed()) * 2 / 5,
+                c.getGreen() + (255 - c.getGreen()) * 2 / 5,
+                c.getBlue() + (255 - c.getBlue()) * 2 / 5);
+        } else {
+            previewColor = DRAG_PREVIEW;
+        }
         LocalDate d = start;
         while (!d.isAfter(end)) {
             JLabel lbl = dayLabelMap.get(d);
