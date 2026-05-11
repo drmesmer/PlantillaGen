@@ -103,6 +103,10 @@ public class CalendarioTabPanel extends JPanel {
         buildCalendar();
     }
 
+    public void refreshPlantillas() {
+        loadPlantillas();
+    }
+
     private JPanel createLeftPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 4));
         panel.setBorder(BorderFactory.createCompoundBorder(

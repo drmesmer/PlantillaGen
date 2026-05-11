@@ -101,3 +101,12 @@ CREATE INDEX idx_plantilla_detalle_linea ON plantilla_detalle(linea_id);
 CREATE INDEX idx_plantilla_detalle_turno ON plantilla_detalle(plantilla_id, turno_id);
 CREATE INDEX idx_plantilla_detalle_tmp_plantilla ON plantilla_detalle_tmp(plantilla_id);
 CREATE INDEX idx_plantilla_detalle_tmp_turno ON plantilla_detalle_tmp(plantilla_id, turno_id);
+
+CREATE TABLE usuarios (
+    id             SERIAL PRIMARY KEY,
+    codigo         VARCHAR(50)  NOT NULL UNIQUE,
+    password       VARCHAR(100) NOT NULL,
+    ultima_sesion  TIMESTAMP
+);
+
+INSERT INTO usuarios (codigo, password) VALUES ('admin', 'admin');

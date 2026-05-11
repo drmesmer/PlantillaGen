@@ -886,6 +886,7 @@ public class MainFrame extends JFrame {
             estadoCombo.setSelectedItem(h.getEstado());
             plantillaLabel.setText(h.getNombre() + " [" + h.getEstado() + "]");
             statusLabel.setText("Nueva plantilla creada: " + h.getNombre());
+            calendarioTabPanel.refreshPlantillas();
         } catch (Exception e) {
             statusLabel.setText("Error al crear plantilla.");
             e.printStackTrace();
@@ -917,6 +918,7 @@ public class MainFrame extends JFrame {
         } catch (Exception ex) { ex.printStackTrace(); }
         plantillaLabel.setText(currentPlantilla.getNombre() + " [" + currentPlantilla.getEstado() + "]");
         statusLabel.setText("Plantilla guardada: " + currentPlantilla.getNombre());
+        calendarioTabPanel.refreshPlantillas();
     }
 
     private void copyPlantillaToNew() {
@@ -941,6 +943,7 @@ public class MainFrame extends JFrame {
 
             currentPlantilla = nuevo;
             statusLabel.setText("Plantilla copiada como: " + nombre);
+            calendarioTabPanel.refreshPlantillas();
         } catch (Exception e) {
             statusLabel.setText("Error al copiar plantilla.");
             e.printStackTrace();
