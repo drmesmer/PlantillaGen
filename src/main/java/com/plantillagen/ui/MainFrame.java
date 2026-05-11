@@ -16,6 +16,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -50,6 +51,8 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ContainerAdapter;
 import java.awt.event.ContainerEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
@@ -253,7 +256,7 @@ public class MainFrame extends JFrame {
             if (idx == 0) cl.show(statusPanel, "PLANTILLA");
             else if (idx == 1) cl.show(statusPanel, "LINEAS");
             else if (idx == 2) cl.show(statusPanel, "OPERARIOS");
-            else cl.show(statusPanel, "PLANTILLA");
+            else cl.show(statusPanel, "CALENDARIO");
             if (idx == 0) reloadLinePanels();
             updateStatusSpacer();
         });
@@ -277,6 +280,7 @@ public class MainFrame extends JFrame {
         statusPanel.add(statusCardPlantilla, "PLANTILLA");
         statusPanel.add(statusCardLineas, "LINEAS");
         statusPanel.add(statusCardOperarios, "OPERARIOS");
+        statusPanel.add(new JPanel(), "CALENDARIO");
 
         JPanel statusWrapper = new JPanel(new BorderLayout());
         statusWrapper.setOpaque(false);
@@ -905,9 +909,11 @@ public class MainFrame extends JFrame {
         }
         saveAllToPlantillaTmp();
         try {
+            String estado = (String) estadoCombo.getSelectedItem();
             new PlantillaDetalleTmpDAO().copyToPlantillaDetalle(currentPlantilla.getId());
             new PlantillaHeaderDAO().update(currentPlantilla.getId(),
-                currentPlantilla.getNombre(), currentPlantilla.getEstado());
+                currentPlantilla.getNombre(), estado, currentPlantilla.getColor());
+            currentPlantilla.setEstado(estado);
         } catch (Exception ex) { ex.printStackTrace(); }
         plantillaLabel.setText(currentPlantilla.getNombre() + " [" + currentPlantilla.getEstado() + "]");
         statusLabel.setText("Plantilla guardada: " + currentPlantilla.getNombre());
@@ -917,7 +923,8 @@ public class MainFrame extends JFrame {
         try {
             String nombre = generatePlantillaName();
             PlantillaHeaderDAO headerDAO = new PlantillaHeaderDAO();
-            PlantillaHeader nuevo = new PlantillaHeader(nombre, "BORRADOR");
+            PlantillaHeader nuevo = new PlantillaHeader(nombre,
+                (String) estadoCombo.getSelectedItem());
             int newId = headerDAO.save(nuevo);
             nuevo.setId(newId);
 
@@ -1004,16 +1011,44 @@ public class MainFrame extends JFrame {
             table.getColumnModel().getColumn(2).setPreferredWidth(130);
             table.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
             table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+            table.setDefaultEditor(Object.class, null);
 
-            JScrollPane sp = new JScrollPane(table);
-            sp.setPreferredSize(new Dimension(520, 340));
+            JDialog dialog = new JDialog(this, "Cargar plantilla", true);
+            dialog.setLayout(new BorderLayout());
+            JScrollPane scrollPane = new JScrollPane(table);
+            scrollPane.setPreferredSize(new Dimension(520, 340));
+            dialog.add(scrollPane, BorderLayout.CENTER);
 
-            Object[] buttons = {"Cargar", "Cancelar"};
-            int result = JOptionPane.showOptionDialog(this, sp,
-                "Cargar plantilla", JOptionPane.DEFAULT_OPTION,
-                JOptionPane.PLAIN_MESSAGE, null, buttons, buttons[0]);
+            JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            JButton btnCargar = new JButton("Cargar");
+            btnCargar.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            JButton btnCancelar = new JButton("Cancelar");
+            btnCancelar.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            btnPanel.add(btnCargar);
+            btnPanel.add(btnCancelar);
+            dialog.add(btnPanel, BorderLayout.SOUTH);
 
-            if (result != 0) return;
+            final boolean[] accepted = {false};
+            btnCargar.addActionListener(e -> {
+                accepted[0] = true;
+                dialog.dispose();
+            });
+            btnCancelar.addActionListener(e -> dialog.dispose());
+            table.addMouseListener(new MouseAdapter() {
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
+                        accepted[0] = true;
+                        dialog.dispose();
+                    }
+                }
+            });
+
+            dialog.pack();
+            dialog.setSize(560, 380);
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
+
+            if (!accepted[0]) return;
             int sel = table.getSelectedRow();
             if (sel < 0) return;
 

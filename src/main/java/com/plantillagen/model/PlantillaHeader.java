@@ -7,6 +7,7 @@ public class PlantillaHeader {
     private int id;
     private String nombre;
     private String estado;
+    private String color = "#4A90D9";
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
@@ -25,6 +26,9 @@ public class PlantillaHeader {
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
+
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
 
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }

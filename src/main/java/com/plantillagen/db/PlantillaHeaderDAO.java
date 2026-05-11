@@ -14,9 +14,24 @@ import java.util.Optional;
 
 public class PlantillaHeaderDAO {
 
+    private static boolean schemaChecked = false;
+
+    private static void ensureSchema() {
+        if (schemaChecked) return;
+        schemaChecked = true;
+        try (Connection conn = DatabaseConnection.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE plantillas "
+                + "DROP CONSTRAINT IF EXISTS plantillas_estado_check");
+            stmt.execute("ALTER TABLE plantillas "
+                + "ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#4A90D9'");
+        } catch (SQLException ignored) {}
+    }
+
     public List<PlantillaHeader> findAll() throws SQLException {
+        ensureSchema();
         List<PlantillaHeader> list = new ArrayList<>();
-        String sql = "SELECT id, nombre, estado, created_at, updated_at FROM plantillas ORDER BY updated_at DESC";
+        String sql = "SELECT id, nombre, estado, color, created_at, updated_at FROM plantillas ORDER BY updated_at DESC";
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -53,8 +68,8 @@ public class PlantillaHeaderDAO {
     }
 
     public int save(PlantillaHeader header) throws SQLException {
-        String sql = "INSERT INTO plantillas (nombre, estado, created_at, updated_at) "
-                   + "VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+        String sql = "INSERT INTO plantillas (nombre, estado, color, created_at, updated_at) "
+                   + "VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -63,6 +78,7 @@ public class PlantillaHeaderDAO {
             ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, header.getNombre());
             ps.setString(2, header.getEstado() != null ? header.getEstado() : "BORRADOR");
+            ps.setString(3, header.getColor() != null ? header.getColor() : "#4A90D9");
             ps.executeUpdate();
             rs = ps.getGeneratedKeys();
             if (rs.next()) {
@@ -74,8 +90,9 @@ public class PlantillaHeaderDAO {
         return -1;
     }
 
-    public void update(int id, String nombre, String estado) throws SQLException {
-        String sql = "UPDATE plantillas SET nombre = ?, estado = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+    public void update(int id, String nombre, String estado, String color) throws SQLException {
+        String sql = "UPDATE plantillas SET nombre = ?, estado = ?, color = ?, "
+                   + "updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         Connection conn = null;
         PreparedStatement ps = null;
         try {
@@ -83,7 +100,8 @@ public class PlantillaHeaderDAO {
             ps = conn.prepareStatement(sql);
             ps.setString(1, nombre);
             ps.setString(2, estado);
-            ps.setInt(3, id);
+            ps.setString(3, color != null ? color : "#4A90D9");
+            ps.setInt(4, id);
             ps.executeUpdate();
         } finally {
             DatabaseConnection.close(null, ps, conn);
@@ -110,6 +128,7 @@ public class PlantillaHeaderDAO {
             rs.getString("estado")
         );
         h.setId(rs.getInt("id"));
+        try { h.setColor(rs.getString("color")); } catch (SQLException ignored) {}
         h.setCreatedAt(rs.getTimestamp("created_at"));
         h.setUpdatedAt(rs.getTimestamp("updated_at"));
         return h;

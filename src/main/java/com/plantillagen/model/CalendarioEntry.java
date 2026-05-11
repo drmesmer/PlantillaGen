@@ -5,18 +5,15 @@ import java.time.LocalDate;
 public class CalendarioEntry {
 
     private int id;
-    private int lineaId;
-    private int turnoId;
+    private int plantillaId;
     private LocalDate fecha;
     private boolean activo;
-    private String lineaNombre;
-    private String turnoNombre;
+    private String plantillaNombre;
 
     public CalendarioEntry() {}
 
-    public CalendarioEntry(int lineaId, int turnoId, LocalDate fecha, boolean activo) {
-        this.lineaId = lineaId;
-        this.turnoId = turnoId;
+    public CalendarioEntry(int plantillaId, LocalDate fecha, boolean activo) {
+        this.plantillaId = plantillaId;
         this.fecha = fecha;
         this.activo = activo;
     }
@@ -24,11 +21,8 @@ public class CalendarioEntry {
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
-    public int getLineaId() { return lineaId; }
-    public void setLineaId(int lineaId) { this.lineaId = lineaId; }
-
-    public int getTurnoId() { return turnoId; }
-    public void setTurnoId(int turnoId) { this.turnoId = turnoId; }
+    public int getPlantillaId() { return plantillaId; }
+    public void setPlantillaId(int plantillaId) { this.plantillaId = plantillaId; }
 
     public LocalDate getFecha() { return fecha; }
     public void setFecha(LocalDate fecha) { this.fecha = fecha; }
@@ -36,9 +30,6 @@ public class CalendarioEntry {
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
 
-    public String getLineaNombre() { return lineaNombre; }
-    public void setLineaNombre(String lineaNombre) { this.lineaNombre = lineaNombre; }
-
-    public String getTurnoNombre() { return turnoNombre; }
-    public void setTurnoNombre(String turnoNombre) { this.turnoNombre = turnoNombre; }
+    public String getPlantillaNombre() { return plantillaNombre; }
+    public void setPlantillaNombre(String plantillaNombre) { this.plantillaNombre = plantillaNombre; }
 }

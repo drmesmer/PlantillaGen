@@ -8,8 +8,9 @@ import com.plantillagen.model.PlantillaHeader;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
+import javax.swing.JColorChooser;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -29,11 +30,12 @@ import java.awt.event.MouseEvent;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.format.TextStyle;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class CalendarioTabPanel extends JPanel {
 
@@ -46,9 +48,16 @@ public class CalendarioTabPanel extends JPanel {
     private int selectedPlantillaIndex = -1;
     private PlantillaHeader selectedPlantilla;
 
+    private Map<LocalDate, String> calendarioData = new HashMap<>();
+    private Map<LocalDate, Color> colorData = new HashMap<>();
+    private List<CalendarioEntry> calendarioEntries;
+
+    private LocalDate dragStart = null;
+    private LocalDate dragEnd = null;
+
     private static final Color ROW_EVEN = new Color(255, 255, 255);
     private static final Color ROW_ODD = new Color(247, 249, 252);
-    private static final Color ROW_SELECTED = new Color(200, 220, 255);
+    private static final Color ROW_SELECTED = new Color(180, 210, 255);
 
     private static final Color TODAY_BG = new Color(255, 243, 205);
     private static final Color WEEKEND_BG = new Color(248, 248, 248);
@@ -85,6 +94,7 @@ public class CalendarioTabPanel extends JPanel {
 
     public void initData() {
         loadPlantillas();
+        loadCalendarData();
         buildCalendar();
     }
 
@@ -139,6 +149,7 @@ public class CalendarioTabPanel extends JPanel {
         btnPrev.setPreferredSize(new Dimension(32, 28));
         btnPrev.addActionListener(e -> {
             selectedYear--;
+            loadCalendarData();
             buildCalendar();
         });
 
@@ -151,6 +162,7 @@ public class CalendarioTabPanel extends JPanel {
         btnNext.setPreferredSize(new Dimension(32, 28));
         btnNext.addActionListener(e -> {
             selectedYear++;
+            loadCalendarData();
             buildCalendar();
         });
 
@@ -196,7 +208,8 @@ public class CalendarioTabPanel extends JPanel {
         titleLabel.setBackground(MONTH_TITLE_BG);
         titleLabel.setOpaque(true);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(3, 0, 3, 0));
-        titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, titleLabel.getPreferredSize().height));
+        titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE,
+            titleLabel.getPreferredSize().height));
         panel.add(titleLabel);
 
         JPanel headerRow = new JPanel(new GridLayout(1, 8, 0, 0)) {
@@ -273,7 +286,14 @@ public class CalendarioTabPanel extends JPanel {
                     dayLabel.setText(String.valueOf(day));
                     LocalDate cellDate = ym.atDay(day);
 
-                    if (cellDate.equals(today)) {
+                    Color assignedColor = colorData.get(cellDate);
+                    String plantillaName = calendarioData.get(cellDate);
+                    final boolean hasAssignment = plantillaName != null;
+
+                    if (hasAssignment && assignedColor != null) {
+                        dayLabel.setBackground(assignedColor);
+                        dayLabel.setToolTipText(plantillaName);
+                    } else if (cellDate.equals(today)) {
                         dayLabel.setBackground(TODAY_BG);
                     } else if (d >= 5) {
                         dayLabel.setBackground(WEEKEND_BG);
@@ -290,18 +310,46 @@ public class CalendarioTabPanel extends JPanel {
                     final int dayNum = day;
                     final int monthNum = month;
                     final int dow = d;
+                    final LocalDate clickedDate = cellDate;
+
                     dayLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                     dayLabel.addMouseListener(new MouseAdapter() {
-                        public void mouseClicked(MouseEvent e) {
-                            onDayClicked(monthNum, dayNum);
+                        public void mousePressed(MouseEvent e) {
+                            if (e.getButton() == MouseEvent.BUTTON1) {
+                                dragStart = clickedDate;
+                                dragEnd = clickedDate;
+                            }
+                        }
+                        public void mouseReleased(MouseEvent e) {
+                            if (e.getButton() == MouseEvent.BUTTON3) {
+                                if (hasAssignment) removeAssignment(clickedDate);
+                            } else if (dragStart != null) {
+                                LocalDate end = dragEnd != null ? dragEnd : dragStart;
+                                if (dragStart.equals(end)) {
+                                    if (hasAssignment) removeAssignment(clickedDate);
+                                    else assignPlantilla(clickedDate);
+                                } else {
+                                    assignRange(dragStart, end);
+                                }
+                            }
+                            dragStart = null;
+                            dragEnd = null;
                         }
                         public void mouseEntered(MouseEvent e) {
-                            dayLabel.setBackground(dayLabel.getBackground().darker());
+                            if (dragStart != null) {
+                                dragEnd = clickedDate;
+                            }
+                            if (hasAssignment && assignedColor != null)
+                                dayLabel.setBackground(assignedColor.darker());
+                            else dayLabel.setBackground(dayLabel.getBackground().darker());
                         }
                         public void mouseExited(MouseEvent e) {
-                            LocalDate cd = YearMonth.of(selectedYear, monthNum).atDay(dayNum);
-                            if (cd.equals(today)) dayLabel.setBackground(TODAY_BG);
-                            else if (dow >= 5) dayLabel.setBackground(WEEKEND_BG);
+                            if (hasAssignment && assignedColor != null)
+                                dayLabel.setBackground(assignedColor);
+                            else if (clickedDate.equals(today))
+                                dayLabel.setBackground(TODAY_BG);
+                            else if (dow >= 5)
+                                dayLabel.setBackground(WEEKEND_BG);
                             else dayLabel.setBackground(Color.WHITE);
                         }
                     });
@@ -323,8 +371,57 @@ public class CalendarioTabPanel extends JPanel {
         return panel;
     }
 
-    private void onDayClicked(int month, int day) {
-        System.out.println("Clicked: " + day + "/" + month + "/" + selectedYear);
+    private void assignPlantilla(LocalDate date) {
+        if (selectedPlantilla == null) {
+            JOptionPane.showMessageDialog(this,
+                "Selecciona una plantilla en el panel izquierdo.",
+                "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        try {
+            CalendarioDAO dao = new CalendarioDAO();
+            dao.save(new CalendarioEntry(selectedPlantilla.getId(), date, true));
+            loadCalendarData();
+            buildCalendar();
+        } catch (Exception ex) { ex.printStackTrace(); }
+    }
+
+    private void assignRange(LocalDate start, LocalDate end) {
+        if (selectedPlantilla == null) {
+            JOptionPane.showMessageDialog(this,
+                "Selecciona una plantilla en el panel izquierdo.",
+                "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        if (start.isAfter(end)) {
+            LocalDate tmp = start; start = end; end = tmp;
+        }
+        try {
+            CalendarioDAO dao = new CalendarioDAO();
+            LocalDate d = start;
+            while (!d.isAfter(end)) {
+                dao.save(new CalendarioEntry(selectedPlantilla.getId(), d, true));
+                d = d.plusDays(1);
+            }
+            loadCalendarData();
+            buildCalendar();
+        } catch (Exception ex) { ex.printStackTrace(); }
+    }
+
+    private void removeAssignment(LocalDate date) {
+        String name = calendarioData.get(date);
+        if (name == null) return;
+        try {
+            CalendarioDAO dao = new CalendarioDAO();
+            for (CalendarioEntry e : calendarioEntries) {
+                if (e.getFecha().equals(date)) {
+                    dao.deleteByPlantillaAndDate(e.getPlantillaId(), date);
+                    break;
+                }
+            }
+            loadCalendarData();
+            buildCalendar();
+        } catch (Exception ex) { ex.printStackTrace(); }
     }
 
     private void loadPlantillas() {
@@ -342,6 +439,39 @@ public class CalendarioTabPanel extends JPanel {
             plantillas = new ArrayList<>();
         }
         refreshList();
+    }
+
+    private void loadCalendarData() {
+        calendarioData.clear();
+        colorData.clear();
+        try {
+            CalendarioDAO dao = new CalendarioDAO();
+            calendarioEntries = dao.findByYear(selectedYear);
+            for (CalendarioEntry e : calendarioEntries) {
+                if (e.isActivo()) {
+                    String name = e.getPlantillaNombre() != null
+                        ? e.getPlantillaNombre() : "Plantilla #" + e.getPlantillaId();
+                    calendarioData.put(e.getFecha(), name);
+                    colorData.put(e.getFecha(), getPlantillaColor(e.getPlantillaId()));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            calendarioEntries = new ArrayList<>();
+        }
+    }
+
+    private Color getPlantillaColor(int plantillaId) {
+        for (PlantillaHeader ph : plantillas) {
+            if (ph.getId() == plantillaId) {
+                return parseColor(ph.getColor());
+            }
+        }
+        return new Color(180, 220, 200);
+    }
+
+    private Color parseColor(String hex) {
+        try { return Color.decode(hex); } catch (Exception e) { return Color.GRAY; }
     }
 
     private void refreshList() {
@@ -371,18 +501,38 @@ public class CalendarioTabPanel extends JPanel {
         row.setPreferredSize(new Dimension(0, 30));
         row.setOpaque(false);
 
+        Color c = parseColor(ph.getColor());
+        JButton colorBtn = new JButton(" ");
+        colorBtn.setBackground(c);
+        colorBtn.setPreferredSize(new Dimension(18, 18));
+        colorBtn.setMinimumSize(new Dimension(18, 18));
+        colorBtn.setMaximumSize(new Dimension(18, 18));
+        colorBtn.setFocusPainted(false);
+        colorBtn.setBorder(BorderFactory.createEmptyBorder());
+        colorBtn.addActionListener(e -> {
+            Color newColor = JColorChooser.showDialog(this,
+                "Color de plantilla", c);
+            if (newColor != null) {
+                String hex = String.format("#%02X%02X%02X",
+                    newColor.getRed(), newColor.getGreen(), newColor.getBlue());
+                ph.setColor(hex);
+                colorBtn.setBackground(newColor);
+                try {
+                    new PlantillaHeaderDAO().update(ph.getId(), ph.getNombre(),
+                        ph.getEstado(), hex);
+                    loadCalendarData();
+                    buildCalendar();
+                } catch (Exception ex) { ex.printStackTrace(); }
+            }
+        });
+        row.add(colorBtn, BorderLayout.WEST);
+
         JPanel infoPanel = new JPanel(new BorderLayout(4, 0));
         infoPanel.setOpaque(false);
 
         JLabel lblName = new JLabel(" " + ph.getNombre());
         lblName.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         infoPanel.add(lblName, BorderLayout.CENTER);
-
-        JLabel lblEstado = new JLabel(ph.getEstado());
-        lblEstado.setFont(new Font("Segoe UI", Font.PLAIN, 9));
-        lblEstado.setForeground(Color.GRAY);
-        lblEstado.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 6));
-        infoPanel.add(lblEstado, BorderLayout.EAST);
 
         row.add(infoPanel, BorderLayout.CENTER);
 
@@ -410,8 +560,7 @@ public class CalendarioTabPanel extends JPanel {
         for (int i = 0; i < rows.length && i < plantillas.size(); i++) {
             PlantillaHeader ph = plantillas.get(i);
             boolean show = filter.isEmpty()
-                || ph.getNombre().toLowerCase().contains(filter)
-                || ph.getEstado().toLowerCase().contains(filter);
+                || ph.getNombre().toLowerCase().contains(filter);
             rows[i].setVisible(show);
         }
         listPanel.revalidate();

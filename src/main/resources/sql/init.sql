@@ -40,18 +40,18 @@ CREATE TABLE turnos (
 );
 
 CREATE TABLE calendario (
-    id          SERIAL PRIMARY KEY,
-    linea_id    INTEGER  REFERENCES lineas_produccion(id) ON DELETE CASCADE,
-    turno_id    INTEGER  REFERENCES turnos(id) ON DELETE SET NULL,
-    fecha       DATE     NOT NULL,
-    activo      BOOLEAN  DEFAULT TRUE,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id           SERIAL PRIMARY KEY,
+    plantilla_id INTEGER  NOT NULL REFERENCES plantillas(id) ON DELETE CASCADE,
+    fecha        DATE     NOT NULL,
+    activo       BOOLEAN  DEFAULT TRUE,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (plantilla_id, fecha)
 );
 
 CREATE INDEX idx_plantilla_linea ON plantilla(linea_id);
 CREATE INDEX idx_plantilla_operario ON plantilla(operario_id);
 CREATE INDEX idx_calendario_fecha ON calendario(fecha);
-CREATE INDEX idx_calendario_linea ON calendario(linea_id);
+CREATE INDEX idx_calendario_plantilla ON calendario(plantilla_id);
 
 INSERT INTO lineas_produccion (numero, nombre) VALUES
     (1, 'Línea 1'),  (2, 'Línea 2'),  (3, 'Línea 3'),
