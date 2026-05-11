@@ -24,6 +24,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -92,6 +93,7 @@ public class MainFrame extends JFrame {
     private JTextField filterField;
     private JComboBox<String> turnoCombo;
     private JComboBox<String> categoriaCombo;
+    private JComboBox<String> estadoCombo;
 
     private List<JPanel> lineaCardsPanels;
     private List<JPanel> lineaLeaderPanels;
@@ -208,6 +210,18 @@ public class MainFrame extends JFrame {
             applyFilters();
         });
         turnoPanel.add(categoriaCombo);
+
+        turnoPanel.add(new JLabel("  Estado:"));
+        estadoCombo = new JComboBox<>(new String[]{"BORRADOR", "ACTIVA"});
+        estadoCombo.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        estadoCombo.addActionListener(e -> {
+            if (currentPlantilla != null) {
+                currentPlantilla.setEstado((String) estadoCombo.getSelectedItem());
+                plantillaLabel.setText(currentPlantilla.getNombre()
+                    + " [" + currentPlantilla.getEstado() + "]");
+            }
+        });
+        turnoPanel.add(estadoCombo);
         rightPanel.add(turnoPanel, BorderLayout.NORTH);
 
         linesScrollPane = new JScrollPane(linesContainer);
@@ -614,6 +628,7 @@ public class MainFrame extends JFrame {
 
     public void initData() {
         try {
+            new PlantillaDetalleTmpDAO().deleteAll();
             OperarioDAO dao = new OperarioDAO();
             List<Operario> operarios = dao.findAll();
             allOperarios.clear();
@@ -636,17 +651,6 @@ public class MainFrame extends JFrame {
             lineasTabPanel.initData();
             calendarioTabPanel.initData();
             operariosTabPanel.initData();
-
-            try {
-                PlantillaHeaderDAO headerDAO = new PlantillaHeaderDAO();
-                List<PlantillaHeader> plantillas = headerDAO.findAll();
-                if (!plantillas.isEmpty()) {
-                    currentPlantilla = plantillas.get(0);
-                    rebuildPoolForTurno();
-                    plantillaLabel.setText(currentPlantilla.getNombre()
-                        + " [" + currentPlantilla.getEstado() + "]");
-                }
-            } catch (Exception ex) { /* sin datos previos */ }
 
             statusLabel.setText(operarios.size() + " operarios cargados.");
             SwingUtilities.invokeLater(this::updateStatusSpacer);
@@ -851,48 +855,60 @@ public class MainFrame extends JFrame {
     }
 
     private void nuevaPlantilla() {
-        clearAllLines();
-        currentPlantilla = null;
-        plantillaLabel.setText("(sin guardar)");
-        statusLabel.setText("Nueva plantilla creada.");
+        try {
+            String nombre = generatePlantillaName();
+            JTextField nameField = new JTextField(nombre, 30);
+            nameField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            JPanel panel = new JPanel(new BorderLayout(0, 8));
+            panel.add(new JLabel("Nombre de la nueva plantilla:"), BorderLayout.NORTH);
+            panel.add(nameField, BorderLayout.CENTER);
+
+            int result = JOptionPane.showConfirmDialog(this, panel,
+                "Nueva plantilla", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+            if (result != JOptionPane.OK_OPTION) return;
+
+            nombre = nameField.getText().trim();
+            if (nombre.isEmpty()) return;
+
+            clearAllLines();
+            PlantillaHeaderDAO dao = new PlantillaHeaderDAO();
+            PlantillaHeader h = new PlantillaHeader(nombre,
+                (String) estadoCombo.getSelectedItem());
+            int id = dao.save(h);
+            h.setId(id);
+            currentPlantilla = h;
+            new PlantillaDetalleTmpDAO().deleteAll();
+            estadoCombo.setSelectedItem(h.getEstado());
+            plantillaLabel.setText(h.getNombre() + " [" + h.getEstado() + "]");
+            statusLabel.setText("Nueva plantilla creada: " + h.getNombre());
+        } catch (Exception e) {
+            statusLabel.setText("Error al crear plantilla.");
+            e.printStackTrace();
+        }
     }
 
     private void guardarPlantilla() {
-        if (currentPlantilla != null) {
-            String[] opts = {"Actualizar", "Nueva", "Cancelar"};
-            int option = JOptionPane.showOptionDialog(this,
-                "¿Actualizar \"" + currentPlantilla.getNombre() + "\" o guardar como nueva?",
-                "Guardar plantilla", JOptionPane.YES_NO_CANCEL_OPTION,
-                JOptionPane.QUESTION_MESSAGE, null, opts, opts[0]);
-            if (option == 2 || option == JOptionPane.CLOSED_OPTION) return;
-            if (option == 1) {
-                copyPlantillaToNew();
-                return;
-            }
-        }
         if (currentPlantilla == null) {
-            try {
-                String nombre = generatePlantillaName();
-                PlantillaHeaderDAO dao = new PlantillaHeaderDAO();
-                PlantillaHeader h = new PlantillaHeader(nombre, "BORRADOR");
-                int id = dao.save(h);
-                h.setId(id);
-                currentPlantilla = h;
-                saveAllToPlantillaTmp();
-                try {
-                    new PlantillaDetalleTmpDAO().copyToPlantillaDetalle(id);
-                } catch (Exception ex) { ex.printStackTrace(); }
-            } catch (Exception e) {
-                statusLabel.setText("Error al crear plantilla.");
-                e.printStackTrace();
-                return;
-            }
-        } else {
-            saveAllToPlantillaTmp();
-            try {
-                new PlantillaDetalleTmpDAO().copyToPlantillaDetalle(currentPlantilla.getId());
-            } catch (Exception ex) { ex.printStackTrace(); }
+            statusLabel.setText("Primero crea una plantilla con Nueva.");
+            return;
         }
+        String[] opts = {"Actualizar", "Nueva", "Cancelar"};
+        int option = JOptionPane.showOptionDialog(this,
+            "¿Actualizar \"" + currentPlantilla.getNombre() + "\" o guardar como nueva?",
+            "Guardar plantilla", JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE, null, opts, opts[0]);
+        if (option == 2 || option == JOptionPane.CLOSED_OPTION) return;
+        if (option == 1) {
+            copyPlantillaToNew();
+            return;
+        }
+        saveAllToPlantillaTmp();
+        try {
+            new PlantillaDetalleTmpDAO().copyToPlantillaDetalle(currentPlantilla.getId());
+            new PlantillaHeaderDAO().update(currentPlantilla.getId(),
+                currentPlantilla.getNombre(), currentPlantilla.getEstado());
+        } catch (Exception ex) { ex.printStackTrace(); }
         plantillaLabel.setText(currentPlantilla.getNombre() + " [" + currentPlantilla.getEstado() + "]");
         statusLabel.setText("Plantilla guardada: " + currentPlantilla.getNombre());
     }
@@ -926,9 +942,9 @@ public class MainFrame extends JFrame {
 
     private String generatePlantillaName() throws Exception {
         LocalDate today = LocalDate.now();
-        String datePrefix = today.format(DateTimeFormatter.ofPattern("ddMMyyyy"));
+        String datePrefix = today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         int week = today.get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear());
-        String prefix = datePrefix + "_" + week + "_v";
+        String prefix = datePrefix + "_Semana" + week + "_v";
 
         PlantillaHeaderDAO dao = new PlantillaHeaderDAO();
         List<PlantillaHeader> all = dao.findAll();
@@ -955,27 +971,55 @@ public class MainFrame extends JFrame {
                     JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
-            String[] options = new String[plantillas.size() + 1];
-            options[0] = "-- Sin plantilla (limpiar) --";
+
+            String[] cols = {"Nombre", "Estado", "Creada"};
+            Object[][] data = new Object[plantillas.size()][3];
+            java.time.format.DateTimeFormatter dtf =
+                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             for (int i = 0; i < plantillas.size(); i++) {
                 PlantillaHeader p = plantillas.get(i);
-                options[i + 1] = "[" + p.getEstado() + "] " + p.getNombre();
+                data[i][0] = p.getNombre();
+                data[i][1] = p.getEstado();
+                data[i][2] = p.getCreatedAt() != null
+                    ? p.getCreatedAt().toLocalDateTime().format(dtf) : "";
             }
-            String choice = (String) JOptionPane.showInputDialog(this,
-                "Selecciona una plantilla:", "Cargar plantilla",
-                JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-            if (choice == null) return;
-            if (choice.equals(options[0])) {
-                nuevaPlantilla();
-                return;
-            }
-            int idx = -1;
-            for (int i = 1; i < options.length; i++) {
-                if (options[i].equals(choice)) { idx = i - 1; break; }
-            }
-            if (idx < 0) return;
-            PlantillaHeader selected = plantillas.get(idx);
+            JTable table = new JTable(data, cols) {
+                public java.awt.Component prepareRenderer(
+                        javax.swing.table.TableCellRenderer r, int row, int col) {
+                    java.awt.Component c = super.prepareRenderer(r, row, col);
+                    if (!isRowSelected(row)) {
+                        c.setBackground(row % 2 == 0
+                            ? new Color(245, 247, 250) : Color.WHITE);
+                    }
+                    if (c instanceof javax.swing.JComponent) {
+                        ((javax.swing.JComponent) c).setOpaque(true);
+                    }
+                    return c;
+                }
+            };
+            table.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            table.setRowHeight(26);
+            table.getColumnModel().getColumn(0).setPreferredWidth(220);
+            table.getColumnModel().getColumn(1).setPreferredWidth(70);
+            table.getColumnModel().getColumn(2).setPreferredWidth(130);
+            table.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+            table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+            JScrollPane sp = new JScrollPane(table);
+            sp.setPreferredSize(new Dimension(520, 340));
+
+            Object[] buttons = {"Cargar", "Cancelar"};
+            int result = JOptionPane.showOptionDialog(this, sp,
+                "Cargar plantilla", JOptionPane.DEFAULT_OPTION,
+                JOptionPane.PLAIN_MESSAGE, null, buttons, buttons[0]);
+
+            if (result != 0) return;
+            int sel = table.getSelectedRow();
+            if (sel < 0) return;
+
+            PlantillaHeader selected = plantillas.get(sel);
             currentPlantilla = selected;
+            estadoCombo.setSelectedItem(selected.getEstado());
             try {
                 PlantillaDetalleTmpDAO tmpDAO = new PlantillaDetalleTmpDAO();
                 tmpDAO.copyFromPlantillaDetalle(selected.getId());

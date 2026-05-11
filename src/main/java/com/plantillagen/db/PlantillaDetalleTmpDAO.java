@@ -79,6 +79,19 @@ public class PlantillaDetalleTmpDAO {
         }
     }
 
+    public void deleteAll() throws SQLException {
+        String sql = "DELETE FROM plantilla_detalle_tmp";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.executeUpdate();
+        } finally {
+            DatabaseConnection.close(null, ps, conn);
+        }
+    }
+
     public void deleteByPlantillaId(int plantillaId) throws SQLException {
         String sql = "DELETE FROM plantilla_detalle_tmp WHERE plantilla_id = ?";
         Connection conn = null;

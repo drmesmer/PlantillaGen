@@ -330,7 +330,13 @@ public class CalendarioTabPanel extends JPanel {
     private void loadPlantillas() {
         try {
             PlantillaHeaderDAO dao = new PlantillaHeaderDAO();
-            plantillas = dao.findAll();
+            List<PlantillaHeader> all = dao.findAll();
+            plantillas = new ArrayList<>();
+            for (PlantillaHeader ph : all) {
+                if ("ACTIVA".equalsIgnoreCase(ph.getEstado())) {
+                    plantillas.add(ph);
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
             plantillas = new ArrayList<>();
