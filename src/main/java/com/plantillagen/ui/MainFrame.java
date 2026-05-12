@@ -77,7 +77,7 @@ public class MainFrame extends JFrame {
 
     private static final long serialVersionUID = 1L;
     private static final int POOL_PHOTO_SIZE = 24;
-    private static final int MIN_LINEA_PHOTO = 30;
+    private static final int MIN_LINEA_PHOTO = 65;
     private static final int MAX_LINEA_PHOTO = 120;
     private static final int DEFAULT_LINEA_PHOTO = 65;
 
@@ -1349,6 +1349,12 @@ public class MainFrame extends JFrame {
         for (JPanel leaderPanel : lineaLeaderPanels) {
             updatePanelCardSizes(leaderPanel, newSize);
             updateLeaderSize(leaderPanel, 280);
+        }
+        linesContainer.revalidate();
+        linesContainer.repaint();
+        if (linesScrollPane != null) {
+            linesScrollPane.getViewport().revalidate();
+            linesScrollPane.getViewport().repaint();
         }
     }
 

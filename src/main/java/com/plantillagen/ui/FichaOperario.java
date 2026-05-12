@@ -95,7 +95,10 @@ public class FichaOperario extends JPanel {
     public void setPhotoSize(int newSize) {
         this.photoSize = newSize;
         this.scaledPhoto = scaleImage(operario.getFoto(), photoSize);
-        setPreferredSize(new Dimension(photoSize + 120, photoSize + 60));
+        int cardW = photoSize + 110;
+        int cardH = Math.max(PAD + photoSize + PAD + SHADOW_GAP, 86);
+        setPreferredSize(new Dimension(cardW, cardH));
+        setSize(cardW, cardH);
         revalidate();
         repaint();
     }
