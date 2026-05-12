@@ -61,6 +61,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -107,7 +108,7 @@ public class MainFrame extends JFrame {
     private Map<Integer, Integer> indexToDbId;
     private Map<Integer, Integer> dbIdToIndex;
     private PlantillaHeader currentPlantilla;
-    private JLabel plantillaLabel;
+    private JTextField plantillaNameField;
     private LineasTabPanel lineasTabPanel;
     private CalendarioTabPanel calendarioTabPanel;
     private OperariosTabPanel operariosTabPanel;
@@ -220,8 +221,6 @@ public class MainFrame extends JFrame {
         estadoCombo.addActionListener(e -> {
             if (currentPlantilla != null) {
                 currentPlantilla.setEstado((String) estadoCombo.getSelectedItem());
-                plantillaLabel.setText(currentPlantilla.getNombre()
-                    + " [" + currentPlantilla.getEstado() + "]");
             }
         });
         turnoPanel.add(estadoCombo);
@@ -318,14 +317,15 @@ public class MainFrame extends JFrame {
         btnCargar.setFocusPainted(false);
         btnCargar.addActionListener(e -> cargarPlantilla());
 
-        plantillaLabel = new JLabel("");
-        plantillaLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        plantillaNameField = new JTextField(44);
+        plantillaNameField.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        plantillaNameField.setEditable(true);
 
         west.add(btnNueva);
         west.add(btnGuardar);
         west.add(btnCargar);
         west.add(Box.createHorizontalStrut(6));
-        west.add(plantillaLabel);
+        west.add(plantillaNameField);
         west.add(Box.createHorizontalStrut(6));
         west.add(statusLabel);
         panel.add(west, BorderLayout.WEST);
@@ -884,7 +884,7 @@ public class MainFrame extends JFrame {
             currentPlantilla = h;
             new PlantillaDetalleTmpDAO().deleteAll();
             estadoCombo.setSelectedItem(h.getEstado());
-            plantillaLabel.setText(h.getNombre() + " [" + h.getEstado() + "]");
+            plantillaNameField.setText(h.getNombre());
             statusLabel.setText("Nueva plantilla creada: " + h.getNombre());
             calendarioTabPanel.refreshPlantillas();
         } catch (Exception e) {
@@ -911,12 +911,14 @@ public class MainFrame extends JFrame {
         saveAllToPlantillaTmp();
         try {
             String estado = (String) estadoCombo.getSelectedItem();
+            String nombre = plantillaNameField.getText().trim();
+            if (!nombre.isEmpty()) currentPlantilla.setNombre(nombre);
             new PlantillaDetalleTmpDAO().copyToPlantillaDetalle(currentPlantilla.getId());
             new PlantillaHeaderDAO().update(currentPlantilla.getId(),
                 currentPlantilla.getNombre(), estado, currentPlantilla.getColor());
             currentPlantilla.setEstado(estado);
         } catch (Exception ex) { ex.printStackTrace(); }
-        plantillaLabel.setText(currentPlantilla.getNombre() + " [" + currentPlantilla.getEstado() + "]");
+        plantillaNameField.setText(currentPlantilla.getNombre());
         statusLabel.setText("Plantilla guardada: " + currentPlantilla.getNombre());
         calendarioTabPanel.refreshPlantillas();
     }
@@ -924,6 +926,20 @@ public class MainFrame extends JFrame {
     private void copyPlantillaToNew() {
         try {
             String nombre = generatePlantillaName();
+            JTextField nameField = new JTextField(nombre, 30);
+            nameField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            JPanel panel = new JPanel(new BorderLayout(0, 8));
+            panel.add(new JLabel("Nombre de la nueva plantilla:"), BorderLayout.NORTH);
+            panel.add(nameField, BorderLayout.CENTER);
+
+            int result = JOptionPane.showConfirmDialog(this, panel,
+                "Guardar como nueva", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+            if (result != JOptionPane.OK_OPTION) return;
+
+            nombre = nameField.getText().trim();
+            if (nombre.isEmpty()) return;
+
             PlantillaHeaderDAO headerDAO = new PlantillaHeaderDAO();
             PlantillaHeader nuevo = new PlantillaHeader(nombre,
                 (String) estadoCombo.getSelectedItem());
@@ -952,8 +968,9 @@ public class MainFrame extends JFrame {
 
     private String generatePlantillaName() throws Exception {
         LocalDate today = LocalDate.now();
-        String datePrefix = today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        int week = today.get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear());
+        LocalDate nextMonday = today.with(DayOfWeek.MONDAY).plusWeeks(1);
+        String datePrefix = nextMonday.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        int week = nextMonday.get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear());
         String prefix = datePrefix + "_Semana" + week + "_v";
 
         PlantillaHeaderDAO dao = new PlantillaHeaderDAO();
@@ -1063,7 +1080,7 @@ public class MainFrame extends JFrame {
                 tmpDAO.copyFromPlantillaDetalle(selected.getId());
             } catch (Exception ex) { ex.printStackTrace(); }
             rebuildPoolForTurno();
-            plantillaLabel.setText(selected.getNombre() + " [" + selected.getEstado() + "]");
+            plantillaNameField.setText(selected.getNombre());
             statusLabel.setText("Plantilla cargada: " + selected.getNombre());
         } catch (Exception e) {
             statusLabel.setText("Error al cargar plantillas.");
@@ -1161,7 +1178,7 @@ public class MainFrame extends JFrame {
                 int id = dao.save(h);
                 h.setId(id);
                 currentPlantilla = h;
-                plantillaLabel.setText("(nueva sesión)");
+                plantillaNameField.setText("(nueva sesión)");
             } catch (Exception e) {
                 statusLabel.setText("Error al crear plantilla: " + e.getMessage());
                 e.printStackTrace();

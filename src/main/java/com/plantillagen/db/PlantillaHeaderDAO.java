@@ -31,7 +31,7 @@ public class PlantillaHeaderDAO {
     public List<PlantillaHeader> findAll() throws SQLException {
         ensureSchema();
         List<PlantillaHeader> list = new ArrayList<>();
-        String sql = "SELECT id, nombre, estado, color, created_at, updated_at FROM plantillas ORDER BY updated_at DESC";
+        String sql = "SELECT id, nombre, estado, color, created_at, updated_at FROM plantillas ORDER BY created_at DESC";
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;

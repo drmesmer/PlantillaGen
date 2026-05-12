@@ -49,6 +49,15 @@ public class CalendarioTabPanel extends JPanel {
     private JLabel yearLabel;
     private int selectedPlantillaIndex = -1;
     private PlantillaHeader selectedPlantilla;
+    private Runnable onPlantillaDoubleClick;
+
+    public void setOnPlantillaDoubleClick(Runnable callback) {
+        this.onPlantillaDoubleClick = callback;
+    }
+
+    public PlantillaHeader getSelectedPlantilla() {
+        return selectedPlantilla;
+    }
 
     private Map<LocalDate, String> calendarioData = new HashMap<>();
     private Map<LocalDate, Color> colorData = new HashMap<>();
@@ -635,6 +644,9 @@ public class CalendarioTabPanel extends JPanel {
         row.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 selectPlantilla(index);
+                if (e.getClickCount() == 2 && onPlantillaDoubleClick != null) {
+                    onPlantillaDoubleClick.run();
+                }
             }
         });
         row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
